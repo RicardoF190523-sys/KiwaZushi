@@ -1,2 +1,0 @@
-# KiwaZushi
-Toma de pedidos
