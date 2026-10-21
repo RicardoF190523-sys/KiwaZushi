@@ -1,0 +1,538 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiwua Zushi | Pedidos</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f3f5f4;
+  margin: 0;
+  color: #24332d;
+}
+
+header {
+  background: #153e34;
+  color: white;
+  text-align: center;
+  padding: 24px 15px;
+}
+
+header h1 { margin: 0 0 8px; }
+header p { margin: 0; }
+
+main {
+  max-width: 650px;
+  margin: auto;
+  padding: 15px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px #00000010;
+}
+
+h2 { font-size: 19px; margin-top: 0; }
+
+label {
+  display: block;
+  font-weight: bold;
+  margin: 12px 0 7px;
+}
+
+input[type="text"], select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #c5d0ca;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+textarea { min-height: 75px; }
+
+.producto {
+  display: grid;
+  grid-template-columns: 26px 1fr 105px;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.producto label {
+  margin: 0;
+  font-weight: normal;
+}
+
+.producto input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: #167a52;
+}
+
+.producto input[type="text"] {
+  padding: 9px 5px;
+  font-size: 14px;
+}
+
+.producto input:disabled {
+  background: #eeeeee;
+}
+
+button {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 9px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.enviar {
+  background: #25D366;
+  color: white;
+}
+
+.copiar {
+  background: #e3eee8;
+  color: #174936;
+}
+
+.info {
+  background: #fff5d9;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+#contador {
+  color: #167a52;
+  font-weight: bold;
+}
+
+#error {
+  color: #bd2929;
+  font-weight: bold;
+}
+
+footer {
+  text-align: center;
+  padding: 20px;
+  color: #68736e;
+  font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🍣 KIWUA ZUSHI</h1>
+  <p>Sistema de pedidos de insumos</p>
+</header>
+
+<main>
+
+<section class="card">
+  <h2>📋 Nuevo pedido</h2>
+
+  <label for="colaborador">Nombre del colaborador</label>
+  <input id="colaborador" type="text"
+         placeholder="Escribe tu nombre">
+
+  <label for="proveedor">Selecciona el proveedor o área</label>
+  <select id="proveedor"></select>
+
+  <div class="info">
+    Revisa las existencias antes de pedir.
+    Marca los productos necesarios y escribe
+    la cantidad con su unidad: kg, piezas,
+    cajas, litros, etc.
+  </div>
+</section>
+
+<section class="card">
+  <h2>📦 Productos</h2>
+  <p id="contador">0 seleccionados</p>
+  <div id="productos"></div>
+</section>
+
+<section class="card">
+  <h2>📝 Finalizar pedido</h2>
+
+  <label for="observaciones">Observaciones</label>
+  <textarea id="observaciones"
+    placeholder="Ejemplo: Se necesita para el viernes">
+  </textarea>
+
+  <p id="error"></p>
+
+  <button class="enviar" onclick="enviarPedido()">
+    📲 Enviar por WhatsApp
+  </button>
+
+  <button class="copiar" onclick="copiarPedido()">
+    📋 Copiar pedido
+  </button>
+
+  <p style="font-size:13px;color:#666">
+    El pedido se abrirá en WhatsApp.
+    El colaborador deberá confirmar el envío.
+    Todos los pedidos quedan pendientes
+    de autorización.
+  </p>
+</section>
+
+</main>
+
+<footer>
+  Kiwua Zushi · Control interno de pedidos
+</footer>
+
+<script>
+
+// WHATSAPP QUE RECIBIRÁ LOS PEDIDOS
+const telefono = "526241297955";
+
+// CATÁLOGO DE PROVEEDORES Y PRODUCTOS
+const inventario = {
+
+"PESCADERÍA EL GANZO": [
+"Camarón","Pulpo","Salmón","Surimi",
+"Atún","Aros de Calamar","Pez Tilapia"
+],
+
+"BARAJAS": [
+"Mayonesa","Cátsup cubeta","Aceite galón",
+"Tocino","Philadelphia","Queso Amarillo",
+"Queso Blanco","Mantequilla Deisy",
+"Harina","Servilletas"
+],
+
+"SAMS": [
+"Aderezo Ranch","Salsa Barbecue",
+"Salsa Buffalo","Salsa Mango Habanero",
+"Aderezo Miel Mostaza","Aderezo César",
+"Aceite Galón","Philadelphia",
+"Espaqueti","Mayonesa",
+"Sazonador Pimienta limón","Ajo picado"
+],
+
+"CARNEMART": [
+"Cajas (#12, #14, #16)","Arrachera",
+"Queso líquido","Pan para hamburguesa (Grande)",
+"Aros de cebolla","Nuggets"
+],
+
+"JUAN PABLO (Nostra)": [
+"Pollo caja","Papa francesa","Papa gajo",
+"Nuggets","Surimi","Carne para hamburguesa"
+],
+
+"TOYO": [
+"Arroz Japonés","Panko","Algas",
+"Pasta Miso","Hondashi","Palillos",
+"Vermicelli","Mirin",
+"Pasta Wonton Redonda Chica",
+"Pasta Wonton Cuadrada Chica",
+"Harina Tempura","Galletas de la Suerte",
+"Calpico","Sirasha 255g",
+"Vinagre de Arroz",
+"Aceite de ajonjolí chico","Soya Galón"
+],
+
+"DESECHABLE MANOLO, SERVI O LA CHULA": [
+"Tazón 2 onzas","Tapa 2 onzas",
+"Tazón 1 onza","Tapa 1 onza",
+"Contenedor hamburguesero negro",
+"Contenedor 8x8 liso negro",
+"Contenedor de hotdog",
+"Vaso litro térmico",
+"Tapa para vaso de litro térmico",
+"Bolsa 8x25",
+"Bolsa de kilo (Bolsa de rollo)",
+"Tenedor grande","Tenedor","Popote",
+"Bolsas (mini, chica, mediana, grande)",
+"Encerado","Domos #10-Bajo",
+"Bolsa para basura",
+"Vaso plástico medio litro",
+"Tapadera medio litro plástico"
+],
+
+"VERDURA MEMO": [
+"Aguacate","Cebollín","Pimiento Morrón",
+"Piña","Mango","Fresa","Limón",
+"Naranja","Jalapeño","Jitomate",
+"Cebolla Morada","Cebolla Blanca",
+"Pepino","Zanahoria","Brócoli",
+"Coliflor","Calabaza","Apio",
+"Chile de árbol","Cilantro","Papa",
+"Chile serrano","Ajo","Plátano macho",
+"Ajonjolí","Nuez granillo",
+"Champiñones","Lechuga orejona",
+"Jitomate Cherry","Betabel"
+],
+
+"BOTIQUÍN": [
+"Curitas","Alcohol","Gasas",
+"Tintura de Yodo","Cinta de tela",
+"Guantes","Algodón","Kleenex",
+"Pomadas (Quemadura, árnica)",
+"Agua oxigenada",
+"Medicamento (Ibuprofeno, Paracetamol, Flanax, Terramicina)",
+"Cubrebocas"
+],
+
+"BARRA": [
+"Cereza","Endulzante (Madrileña)",
+"Hielo","Agua Mineral","Jugo de piña",
+"Crema de coco (Kalahua)",
+"Leche Evaporada (Carnation)",
+"Granadina"
+],
+
+"REPARTIDORES PRODUCCION": [
+"Aderezo mil islas","Soya con chiles",
+"Soya preparada","Chile rojo en polvo",
+"Bolsas de Ranch","Bolsas de Cátsup",
+"Bolsas de Mayonesa"
+],
+
+"COCINA PRODUCCION": [
+"Salsa de anguila","Sal Pimienta",
+"Nuez caramelizada",
+"Dedos de queso refrigerados",
+"Boneless refrigerados",
+"Porcion Papas (francesa, gajo)",
+"Camarón pelado y cocido",
+"Pollo picado y cocido",
+"Arrachera picada y cocida",
+"Pepino julianas",
+"Zanahoria en brunua",
+"Calabaza en brunua",
+"Fajitas de pollo","Queso Chihuahua"
+],
+
+"PAPELERÍA": [
+"Corrector","Libreta profesional de raya",
+"Rollos de impresora","Grapas",
+"Cinta Maskking",
+"Lapiceros (Negro, rojo, azul)",
+"Lápiz","Sacapuntas","Borrador",
+"Tarjetas de presentación",
+"Rollo para terminal","Notas"
+],
+
+"LIMPIEZA Y BAÑO": [
+"Rollos de papel","Fabuloso",
+"Bolsas para basura negras",
+"Botes de basura (barra y cocina)",
+"Cloro","Aromatizante",
+"Pastillas de cloro","Harpic",
+"Jabón líquido para manos",
+"Cepillo para baño","Franela para baño",
+"Jabón ROMA","Fibra","Estropajo",
+"Limpiador para vidrio","Jalador"
+],
+
+"BEBIDAS": [
+"Jaz-tea (Light, normal)","Fuze-tea",
+"Calpico","Naranjada","Limonada",
+"Piñada","Pantera Rosa",
+"Refresco (Coca, Sprite, fanta, mundet, topo chico)",
+"Agua natural (500ml y 1 litro)",
+"Agua de Sabor (500ml y 1 litro)",
+"Agua mineral"
+],
+
+"OTROS": [
+"Cofias","Beneno moscas"
+]
+
+};
+
+// ELEMENTOS DE LA PÁGINA
+const selector = document.getElementById("proveedor");
+const contenedor = document.getElementById("productos");
+const contador = document.getElementById("contador");
+const error = document.getElementById("error");
+
+// GUARDAR SELECCIONES AL CAMBIAR DE PROVEEDOR
+const seleccionados = {};
+
+// CARGAR PROVEEDORES
+Object.keys(inventario).forEach(nombre => {
+  const opcion = document.createElement("option");
+  opcion.value = nombre;
+  opcion.textContent = nombre;
+  selector.appendChild(opcion);
+});
+
+// MOSTRAR PRODUCTOS
+function mostrarProductos() {
+  const proveedor = selector.value;
+  contenedor.replaceChildren();
+
+  inventario[proveedor].forEach((producto, indice) => {
+    const clave = proveedor + "|" + indice;
+    const guardado = seleccionados[clave] || {};
+
+    const fila = document.createElement("div");
+    fila.className = "producto";
+
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.id = "p" + indice;
+    check.checked = !!guardado.marcado;
+
+    const etiqueta = document.createElement("label");
+    etiqueta.htmlFor = check.id;
+    etiqueta.textContent = producto;
+
+    const cantidad = document.createElement("input");
+    cantidad.type = "text";
+    cantidad.placeholder = "Cantidad";
+    cantidad.value = guardado.cantidad || "";
+    cantidad.disabled = !check.checked;
+
+    check.addEventListener("change", () => {
+      cantidad.disabled = !check.checked;
+      seleccionados[clave] = {
+        marcado: check.checked,
+        cantidad: cantidad.value
+      };
+      actualizarContador();
+    });
+
+    cantidad.addEventListener("input", () => {
+      seleccionados[clave] = {
+        marcado: check.checked,
+        cantidad: cantidad.value
+      };
+    });
+
+    fila.append(check, etiqueta, cantidad);
+    contenedor.appendChild(fila);
+  });
+
+  actualizarContador();
+}
+
+// CONTAR PRODUCTOS SELECCIONADOS
+function actualizarContador() {
+  const proveedor = selector.value;
+  let total = 0;
+
+  inventario[proveedor].forEach((producto, indice) => {
+    const clave = proveedor + "|" + indice;
+    if (seleccionados[clave]?.marcado) total++;
+  });
+
+  contador.textContent = total + " seleccionados";
+}
+
+// PREPARAR MENSAJE
+function prepararMensaje() {
+  error.textContent = "";
+
+  const nombre = document.getElementById("colaborador")
+    .value.trim();
+  const proveedor = selector.value;
+  const observaciones = document.getElementById("observaciones")
+    .value.trim();
+
+  if (!nombre) {
+    error.textContent = "Escribe tu nombre.";
+    return null;
+  }
+
+  const productos = [];
+
+  inventario[proveedor].forEach((producto, indice) => {
+    const clave = proveedor + "|" + indice;
+    const dato = seleccionados[clave];
+
+    if (dato?.marcado) {
+      productos.push({
+        nombre: producto,
+        cantidad: (dato.cantidad || "").trim()
+      });
+    }
+  });
+
+  if (productos.length === 0) {
+    error.textContent = "Selecciona al menos un producto.";
+    return null;
+  }
+
+  if (productos.some(p => !p.cantidad)) {
+    error.textContent = "Indica la cantidad de cada producto.";
+    return null;
+  }
+
+  const fecha = new Date().toLocaleDateString("es-MX");
+
+  let mensaje = "🍣 *KIWUA ZUSHI*\n";
+  mensaje += "📦 *SOLICITUD DE PEDIDO*\n\n";
+  mensaje += "📅 Fecha: " + fecha + "\n";
+  mensaje += "👨‍🍳 Colaborador: " + nombre + "\n";
+  mensaje += "🏪 Proveedor/área: " + proveedor + "\n\n";
+  mensaje += "*PRODUCTOS SOLICITADOS:*\n";
+
+  productos.forEach(p => {
+    mensaje += "✅ " + p.nombre + " - " + p.cantidad + "\n";
+  });
+
+  if (observaciones) {
+    mensaje += "\n📝 Observaciones: " + observaciones + "\n";
+  }
+
+  mensaje += "\n⏳ *PENDIENTE DE AUTORIZACIÓN*";
+
+  return mensaje;
+}
+
+// ENVIAR A WHATSAPP
+function enviarPedido() {
+  const mensaje = prepararMensaje();
+  if (!mensaje) return;
+
+  const url = "https://wa.me/" + telefono +
+    "?text=" + encodeURIComponent(mensaje);
+
+  window.location.href = url;
+}
+
+// COPIAR PEDIDO
+async function copiarPedido() {
+  const mensaje = prepararMensaje();
+  if (!mensaje) return;
+
+  try {
+    await navigator.clipboard.writeText(mensaje);
+    error.style.color = "green";
+    error.textContent = "Pedido copiado correctamente.";
+  } catch {
+    window.prompt("Copia tu pedido:", mensaje);
+  }
+}
+
+// INICIAR
+selector.addEventListener("change", mostrarProductos);
+mostrarProductos();
+
+</script>
+
+</body>
+</html>
